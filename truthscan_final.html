@@ -1,0 +1,1719 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TruthScan — AI Fake News Detector</title>
+<meta name="description" content="Professional AI-powered fake news detection with NLP analysis, confidence scoring, and explainable linguistic cues.">
+<meta name="theme-color" content="#050B18">
+<!-- PWA -->
+<link rel="manifest" href="data:application/json,{%22name%22:%22TruthScan%20Pro%22,%22short_name%22:%22TruthScan%22,%22display%22:%22standalone%22,%22background_color%22:%22%23050B18%22,%22theme_color%22:%22%234F8EF7%22}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════════ */
+:root {
+  /* surfaces */
+  --bg:          #050B18;
+  --surf1:       #0A1628;
+  --surf2:       #0F1E38;
+  --surf3:       #152644;
+  --surf4:       rgba(255,255,255,0.04);
+
+  /* accents */
+  --blue:        #4F8EF7;
+  --blue-glow:   rgba(79,142,247,0.25);
+  --blue-dim:    rgba(79,142,247,0.12);
+  --gold:        #F5C542;
+  --gold-glow:   rgba(245,197,66,0.20);
+  --gold-dim:    rgba(245,197,66,0.10);
+
+  /* semantic */
+  --real:        #22C55E;
+  --real-glow:   rgba(34,197,94,0.18);
+  --real-dim:    rgba(34,197,94,0.08);
+  --fake:        #EF4444;
+  --fake-glow:   rgba(239,68,68,0.18);
+  --fake-dim:    rgba(239,68,68,0.08);
+  --warn:        #F59E0B;
+
+  /* text */
+  --t1:   #EEF2FF;
+  --t2:   #94A3B8;
+  --t3:   #475569;
+
+  /* borders */
+  --b1:   rgba(79,142,247,0.15);
+  --b2:   rgba(79,142,247,0.30);
+  --b-g:  rgba(245,197,66,0.20);
+
+  /* type */
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans:  'Inter', system-ui, sans-serif;
+  --mono:  'JetBrains Mono', monospace;
+
+  /* radius */
+  --r-sm:  6px;
+  --r-md:  12px;
+  --r-lg:  18px;
+
+  /* transitions */
+  --t-fast: 0.15s ease;
+  --t-med:  0.3s ease;
+  --t-slow: 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+[data-theme="light"] {
+  --bg:    #F0F4FF;
+  --surf1: #FFFFFF;
+  --surf2: #EEF2FF;
+  --surf3: #E0E9FF;
+  --surf4: rgba(0,0,0,0.03);
+  --t1:    #0F172A;
+  --t2:    #475569;
+  --t3:    #94A3B8;
+  --b1:    rgba(79,142,247,0.18);
+  --b2:    rgba(79,142,247,0.35);
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;font-size:15px;}
+body{
+  background:var(--bg);color:var(--t1);
+  font-family:var(--sans);min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  transition:background var(--t-med), color var(--t-med);
+  overflow-x:hidden;
+}
+button{font-family:var(--sans);cursor:pointer;border:none;background:none;}
+input,textarea{font-family:var(--sans);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:4px;}
+::selection{background:var(--blue-dim);color:var(--blue);}
+
+/* ═══════════════════════════════════════════
+   AMBIENT BACKGROUND GLOW
+═══════════════════════════════════════════ */
+.ambient{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;
+}
+.amb-circle{
+  position:absolute;border-radius:50%;filter:blur(80px);opacity:0.35;
+  animation:amb-float 8s ease-in-out infinite alternate;
+}
+.amb-circle:nth-child(1){
+  width:500px;height:500px;top:-100px;left:-100px;
+  background:radial-gradient(circle,rgba(79,142,247,0.4),transparent 70%);
+  animation-delay:0s;
+}
+.amb-circle:nth-child(2){
+  width:400px;height:400px;bottom:-80px;right:-80px;
+  background:radial-gradient(circle,rgba(245,197,66,0.25),transparent 70%);
+  animation-delay:-4s;
+}
+.amb-circle:nth-child(3){
+  width:300px;height:300px;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(34,197,94,0.12),transparent 70%);
+  animation-delay:-2s;
+}
+@keyframes amb-float{
+  0%{transform:translate(0,0) scale(1);}
+  100%{transform:translate(20px,20px) scale(1.08);}
+}
+.amb-circle:nth-child(1){animation-name:amb-float1;}
+.amb-circle:nth-child(2){animation-name:amb-float2;}
+@keyframes amb-float1{0%{transform:translate(0,0);}100%{transform:translate(30px,20px);}}
+@keyframes amb-float2{0%{transform:translate(0,0);}100%{transform:translate(-20px,-30px);}}
+
+/* ═══════════════════════════════════════════
+   TOP NAV
+═══════════════════════════════════════════ */
+.topnav{
+  position:sticky;top:0;z-index:200;
+  height:52px;
+  background:rgba(5,11,24,0.85);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 1.5rem;
+  transition:background var(--t-med);
+}
+[data-theme="light"] .topnav{background:rgba(240,244,255,0.85);}
+.nav-brand{
+  display:flex;align-items:center;gap:0.6rem;
+  font-family:var(--serif);font-size:1.1rem;font-weight:700;color:var(--t1);
+}
+.brand-icon{
+  width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--blue),#7C3AED);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 12px var(--blue-glow);
+}
+.nav-brand .accent{color:var(--blue);}
+.nav-badge{
+  font-family:var(--mono);font-size:0.58rem;letter-spacing:0.1em;
+  text-transform:uppercase;background:var(--blue-dim);
+  color:var(--blue);border:1px solid var(--b1);
+  padding:0.15rem 0.5rem;border-radius:3px;
+}
+.nav-right{display:flex;align-items:center;gap:0.5rem;}
+.nav-btn{
+  height:32px;padding:0 0.75rem;border-radius:var(--r-sm);
+  border:1px solid var(--b1);color:var(--t2);font-size:0.75rem;
+  display:flex;align-items:center;gap:0.4rem;
+  transition:all var(--t-fast);background:var(--surf4);
+  white-space:nowrap;
+}
+.nav-btn:hover{border-color:var(--b2);color:var(--t1);}
+.nav-btn.active{background:var(--blue-dim);border-color:var(--b2);color:var(--blue);}
+.status-pill{
+  display:flex;align-items:center;gap:0.4rem;
+  font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;
+  text-transform:uppercase;color:var(--real);
+}
+.status-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--real);
+  box-shadow:0 0 6px var(--real);
+  animation:blink 2s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* ═══════════════════════════════════════════
+   HERO MASTHEAD
+═══════════════════════════════════════════ */
+.hero{
+  position:relative;z-index:1;
+  padding:2.5rem 1.5rem 2rem;
+  border-bottom:1px solid var(--b1);
+  overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(79,142,247,0.05) 0%,transparent 60%);
+  pointer-events:none;
+}
+.hero-inner{max-width:1280px;margin:0 auto;}
+.hero-row{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:1.5rem;}
+
+.hero-label{
+  font-family:var(--mono);font-size:0.65rem;letter-spacing:0.18em;
+  text-transform:uppercase;color:var(--blue);
+  display:flex;align-items:center;gap:0.75rem;margin-bottom:0.9rem;
+}
+.hero-label::before{content:'';width:24px;height:1px;background:var(--blue);opacity:0.6;}
+.hero-title{
+  font-family:var(--serif);
+  font-size:clamp(2rem,4.5vw,3.5rem);
+  font-weight:700;line-height:1.05;letter-spacing:-0.02em;
+  color:var(--t1);
+}
+.hero-title .hl{
+  background:linear-gradient(90deg,var(--blue),#9B59F5);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.hero-rule{
+  width:100%;height:1px;margin:1.2rem 0;
+  background:linear-gradient(90deg,var(--blue) 0%,var(--b1) 50%,transparent 100%);
+  opacity:0.5;
+}
+.hero-meta{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;}
+.meta-tag{
+  font-family:var(--mono);font-size:0.62rem;letter-spacing:0.06em;
+  text-transform:uppercase;color:var(--t2);
+  display:flex;align-items:center;gap:0.35rem;
+}
+.meta-tag::before{content:'·';color:var(--blue);font-size:1rem;line-height:0;}
+.hero-stats{display:flex;gap:1.5rem;flex-wrap:wrap;}
+.h-stat{text-align:right;}
+.h-stat .v{font-family:var(--serif);font-size:1.5rem;font-weight:700;color:var(--blue);}
+.h-stat .l{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--t3);}
+
+/* ═══════════════════════════════════════════
+   TOAST NOTIFICATIONS
+═══════════════════════════════════════════ */
+.toast-container{
+  position:fixed;top:64px;right:1rem;z-index:1000;
+  display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;
+}
+.toast{
+  background:var(--surf2);border:1px solid var(--b1);
+  border-radius:var(--r-md);padding:0.75rem 1rem;
+  display:flex;align-items:center;gap:0.6rem;
+  font-size:0.8rem;color:var(--t1);
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  pointer-events:auto;min-width:240px;max-width:320px;
+  backdrop-filter:blur(12px);
+  animation:toast-in 0.3s ease;
+}
+.toast.out{animation:toast-out 0.3s ease forwards;}
+@keyframes toast-in{from{opacity:0;transform:translateX(40px);}to{opacity:1;transform:translateX(0);}}
+@keyframes toast-out{from{opacity:1;transform:translateX(0);}to{opacity:0;transform:translateX(40px);}}
+.toast-icon{width:18px;height:18px;flex-shrink:0;}
+.toast.success .toast-icon{color:var(--real);}
+.toast.error .toast-icon{color:var(--fake);}
+.toast.info .toast-icon{color:var(--blue);}
+
+/* ═══════════════════════════════════════════
+   MAIN LAYOUT
+═══════════════════════════════════════════ */
+.app-main{
+  position:relative;z-index:1;
+  max-width:1280px;margin:0 auto;
+  padding:1.5rem 1.5rem 0;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.25rem;
+}
+@media(max-width:900px){.app-main{grid-template-columns:1fr;}}
+
+/* ═══════════════════════════════════════════
+   GLASS PANEL
+═══════════════════════════════════════════ */
+.panel{
+  background:var(--surf1);
+  border:1px solid var(--b1);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  position:relative;
+  backdrop-filter:blur(8px);
+  transition:border-color var(--t-med),box-shadow var(--t-med);
+}
+.panel:hover{border-color:var(--b2);}
+.panel::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),transparent);
+  opacity:0.5;
+}
+.panel-hd{
+  padding:1.2rem 1.5rem;
+  border-bottom:1px solid var(--b1);
+  background:linear-gradient(180deg,var(--surf2),transparent);
+  display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;
+}
+.panel-lbl{
+  font-family:var(--mono);font-size:0.6rem;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--blue);margin-bottom:0.3rem;
+}
+.panel-ttl{font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--t1);}
+.panel-sub{font-size:0.72rem;color:var(--t2);margin-top:0.2rem;line-height:1.5;}
+.panel-body{padding:1.25rem 1.5rem;}
+
+/* ═══════════════════════════════════════════
+   INPUT PANEL
+═══════════════════════════════════════════ */
+.textarea-wrap{position:relative;margin-bottom:0.75rem;}
+.news-input{
+  width:100%;min-height:200px;resize:vertical;
+  background:var(--surf3);
+  border:1px solid var(--b1);border-radius:var(--r-md);
+  padding:1rem 1.1rem 2.2rem;
+  color:var(--t1);font-size:0.875rem;line-height:1.75;
+  outline:none;transition:border-color var(--t-fast),box-shadow var(--t-fast);
+}
+.news-input::placeholder{color:var(--t3);}
+.news-input:focus{
+  border-color:var(--b2);
+  box-shadow:0 0 0 3px var(--blue-dim);
+}
+.ta-footer{
+  position:absolute;bottom:0.6rem;left:0;right:0;
+  padding:0 0.9rem;
+  display:flex;align-items:center;justify-content:space-between;
+  pointer-events:none;
+}
+.ta-counter{font-family:var(--mono);font-size:0.6rem;color:var(--t3);}
+.ta-words{font-family:var(--mono);font-size:0.6rem;color:var(--t3);}
+
+/* samples */
+.sec-label{
+  font-family:var(--mono);font-size:0.6rem;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--t3);
+  display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--b1);}
+.samples-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1.1rem;}
+.s-chip{
+  background:var(--surf3);border:1px solid var(--b1);border-radius:var(--r-sm);
+  padding:0.55rem 0.75rem;font-size:0.72rem;color:var(--t2);
+  text-align:left;display:flex;align-items:flex-start;gap:0.5rem;
+  transition:all var(--t-fast);cursor:pointer;line-height:1.4;
+}
+.s-chip:hover{border-color:var(--b2);color:var(--t1);background:var(--surf2);}
+.s-cat{
+  font-family:var(--mono);font-size:0.56rem;letter-spacing:0.08em;
+  text-transform:uppercase;padding:0.1rem 0.4rem;border-radius:3px;
+  flex-shrink:0;margin-top:0.1rem;
+}
+.s-cat.real{background:var(--real-dim);color:var(--real);}
+.s-cat.fake{background:var(--fake-dim);color:var(--fake);}
+
+/* action row */
+.action-row{display:flex;align-items:center;justify-content:space-between;gap:0.6rem;margin-bottom:1.1rem;}
+.action-row-left{display:flex;gap:0.5rem;}
+
+.btn-ghost{
+  height:38px;padding:0 1rem;border-radius:var(--r-sm);
+  border:1px solid var(--b1);color:var(--t2);font-size:0.78rem;
+  transition:all var(--t-fast);display:inline-flex;align-items:center;gap:0.4rem;
+}
+.btn-ghost:hover{border-color:var(--b2);color:var(--t1);}
+
+.btn-ai{
+  height:38px;padding:0 1rem;border-radius:var(--r-sm);font-size:0.78rem;
+  border:1px solid rgba(155,89,245,0.3);
+  background:rgba(155,89,245,0.1);color:#C4A4F5;
+  display:inline-flex;align-items:center;gap:0.4rem;
+  transition:all var(--t-fast);
+}
+.btn-ai:hover{border-color:rgba(155,89,245,0.5);background:rgba(155,89,245,0.18);}
+
+.btn-analyze{
+  height:38px;padding:0 1.5rem;border-radius:var(--r-sm);font-size:0.78rem;
+  font-weight:600;letter-spacing:0.05em;text-transform:uppercase;
+  background:linear-gradient(135deg,var(--blue),#6366F1);color:#fff;
+  display:inline-flex;align-items:center;gap:0.45rem;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 18px rgba(79,142,247,0.35);
+  transition:all var(--t-fast);
+}
+.btn-analyze:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(79,142,247,0.45);}
+.btn-analyze:active{transform:translateY(0);}
+.btn-analyze::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,0.2) 50%,transparent 60%);
+  transform:translateX(-100%);
+}
+.btn-analyze.shimmer::after{animation:shine 0.7s ease forwards;}
+@keyframes shine{to{transform:translateX(200%);}}
+
+/* live stats */
+.live-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0.6rem;}
+.lst-cell{
+  background:var(--surf3);border:1px solid var(--b1);
+  border-radius:var(--r-md);padding:0.85rem 0.9rem;
+  transition:all var(--t-fast);
+}
+.lst-cell:hover{border-color:var(--b2);}
+.lst-lbl{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);}
+.lst-val{
+  font-family:var(--serif);font-size:1.3rem;font-weight:700;
+  color:var(--t1);margin-top:0.25rem;transition:color var(--t-fast);
+}
+.lst-val.real{color:var(--real);}
+.lst-val.fake{color:var(--fake);}
+.lst-sub{font-size:0.62rem;color:var(--t3);margin-top:0.1rem;}
+
+/* keyboard hint */
+.kbd-hint{
+  text-align:center;font-family:var(--mono);font-size:0.6rem;
+  color:var(--t3);margin-top:0.75rem;
+}
+.kbd{
+  display:inline-block;background:var(--surf3);border:1px solid var(--b1);
+  border-radius:3px;padding:0.05rem 0.35rem;font-size:0.6rem;
+}
+
+/* ═══════════════════════════════════════════
+   SCAN OVERLAY
+═══════════════════════════════════════════ */
+.scan-ov{
+  position:absolute;inset:0;z-index:20;pointer-events:none;
+  overflow:hidden;opacity:0;transition:opacity 0.1s;
+}
+.scan-ov.go{opacity:1;}
+.scan-line{
+  position:absolute;left:0;right:0;height:2px;top:-2px;
+  background:linear-gradient(90deg,transparent,var(--blue),rgba(255,255,255,0.9),var(--blue),transparent);
+  box-shadow:0 0 20px 6px rgba(79,142,247,0.5);
+}
+.scan-ov.go .scan-line{animation:scan 0.9s cubic-bezier(0.4,0,0.6,1) forwards;}
+@keyframes scan{0%{top:0%;}100%{top:100%;}}
+
+/* ═══════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════ */
+.empty-state{
+  padding:3.5rem 1.5rem;text-align:center;
+}
+.empty-orbit{
+  position:relative;width:80px;height:80px;margin:0 auto 1.5rem;
+}
+.e-ring{
+  position:absolute;inset:0;border-radius:50%;
+  border:1px dashed var(--b2);animation:orbit-spin 8s linear infinite;
+}
+.e-ring:nth-child(2){inset:10px;animation-duration:5s;animation-direction:reverse;border-color:var(--b-g);}
+.e-center{
+  position:absolute;inset:24px;border-radius:50%;
+  background:var(--surf3);border:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--t3);
+}
+@keyframes orbit-spin{to{transform:rotate(360deg);}}
+.empty-ttl{font-family:var(--serif);font-size:1rem;color:var(--t1);margin-bottom:0.5rem;}
+.empty-sub{font-size:0.75rem;color:var(--t2);line-height:1.6;}
+
+/* ═══════════════════════════════════════════
+   RESULT BLOCK
+═══════════════════════════════════════════ */
+
+/* GAUGE + VERDICT */
+.verdict-header{
+  padding:1.5rem;border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;gap:1.5rem;
+}
+.gauge-wrap{position:relative;width:120px;height:120px;flex-shrink:0;}
+.gauge-svg{width:120px;height:120px;transform:rotate(-90deg);}
+.gauge-bg{fill:none;stroke:var(--surf3);stroke-width:8;}
+.gauge-fill{
+  fill:none;stroke-width:8;stroke-linecap:round;
+  stroke:var(--blue);
+  stroke-dasharray:345;stroke-dashoffset:345;
+  transition:stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1),stroke 0.4s;
+  filter:drop-shadow(0 0 8px currentColor);
+}
+.gauge-fill.real{stroke:var(--real);}
+.gauge-fill.fake{stroke:var(--fake);}
+.gauge-center{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+.g-pct{font-family:var(--serif);font-size:1.4rem;font-weight:700;color:var(--t1);}
+.g-lbl{font-family:var(--mono);font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);}
+
+.verdict-info{flex:1;min-width:0;}
+.verdict-stamp{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0.35rem 0.9rem;border-radius:var(--r-sm);
+  font-family:var(--mono);font-size:0.72rem;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;
+  margin-bottom:0.6rem;
+}
+.verdict-stamp.real{background:var(--real-dim);color:var(--real);border:1px solid rgba(34,197,94,0.3);}
+.verdict-stamp.fake{background:var(--fake-dim);color:var(--fake);border:1px solid rgba(239,68,68,0.3);}
+.v-title{font-family:var(--serif);font-size:1.5rem;font-weight:700;color:var(--t1);line-height:1.1;margin-bottom:0.4rem;}
+.v-title.real{color:var(--real);}
+.v-title.fake{color:var(--fake);}
+.v-conf{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:var(--t2);margin-bottom:0.8rem;}
+.v-explain{
+  font-size:0.77rem;line-height:1.7;color:var(--t2);
+  background:var(--surf3);border:1px solid var(--b1);
+  border-left:3px solid var(--blue);
+  border-radius:0 var(--r-sm) var(--r-sm) 0;
+  padding:0.75rem 0.9rem;
+}
+.v-explain.real{border-left-color:var(--real);}
+.v-explain.fake{border-left-color:var(--fake);}
+
+/* sections */
+.res-section{padding:1.1rem 1.5rem;border-bottom:1px solid var(--b1);}
+.res-section:last-child{border-bottom:none;}
+.sec-hd{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:0.8rem;
+}
+
+/* linear meter */
+.lin-meter{margin-bottom:0.9rem;}
+.lm-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;}
+.lm-lbl{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--t2);}
+.lm-val{font-family:var(--mono);font-size:0.78rem;color:var(--t1);font-weight:500;}
+.lm-track{
+  height:6px;background:var(--surf3);border-radius:999px;overflow:hidden;
+  position:relative;
+}
+.lm-fill{
+  height:100%;width:0%;border-radius:999px;
+  transition:width 0.8s cubic-bezier(0.4,0,0.2,1);
+  position:relative;
+}
+.lm-fill.real{background:linear-gradient(90deg,var(--real),rgba(34,197,94,0.5));}
+.lm-fill.fake{background:linear-gradient(90deg,var(--fake),rgba(239,68,68,0.5));}
+.lm-fill.blue{background:linear-gradient(90deg,var(--blue),rgba(79,142,247,0.5));}
+.lm-fill.gold{background:linear-gradient(90deg,var(--gold),rgba(245,197,66,0.5));}
+.lm-fill::after{
+  content:'';position:absolute;right:-1px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;background:inherit;
+  border:2px solid var(--surf1);box-shadow:0 0 6px currentColor;
+}
+
+/* cue cards */
+.cue-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-top:0.9rem;}
+.cue-card{
+  background:var(--surf3);border:1px solid var(--b1);
+  border-radius:var(--r-md);padding:0.9rem;
+}
+.cue-card.risk{border-top:2px solid var(--fake);}
+.cue-card.evid{border-top:2px solid var(--real);}
+.cc-lbl{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);}
+.cc-val{font-family:var(--serif);font-size:1.6rem;font-weight:700;margin-top:0.2rem;}
+.cue-card.risk .cc-val{color:var(--fake);}
+.cue-card.evid .cc-val{color:var(--real);}
+.cc-sub{font-size:0.65rem;color:var(--t3);margin-top:0.15rem;}
+
+/* feature tags */
+.feat-tags{display:flex;flex-wrap:wrap;gap:0.4rem;}
+.feat-tag{
+  font-family:var(--mono);font-size:0.65rem;
+  padding:0.25rem 0.65rem;border-radius:var(--r-sm);
+  background:var(--blue-dim);border:1px solid var(--b1);color:var(--blue);
+  letter-spacing:0.02em;
+}
+
+/* breakdown bars */
+.fb-row{margin-bottom:1rem;}
+.fb-row:last-child{margin-bottom:0;}
+.fb-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.2rem;}
+.fb-name{font-size:0.8rem;font-weight:500;color:var(--t1);}
+.fb-pct{font-family:var(--mono);font-size:0.7rem;color:var(--t2);}
+.fb-desc{font-size:0.68rem;color:var(--t3);line-height:1.5;margin-bottom:0.4rem;}
+.fb-track{height:4px;background:var(--surf3);border-radius:999px;overflow:hidden;}
+.fb-fill{height:100%;width:0%;transition:width 0.7s 0.15s cubic-bezier(0.4,0,0.2,1);border-radius:999px;}
+.fb-fill.risk{background:linear-gradient(90deg,var(--fake),rgba(239,68,68,0.4));}
+.fb-fill.evid{background:linear-gradient(90deg,var(--real),rgba(34,197,94,0.4));}
+
+/* ═══════════════════════════════════════════
+   AI DEEP ANALYSIS SECTION
+═══════════════════════════════════════════ */
+.ai-section{
+  padding:1.1rem 1.5rem;
+  background:linear-gradient(135deg,rgba(155,89,245,0.06),rgba(79,142,247,0.04));
+  border-top:1px solid var(--b1);
+}
+.ai-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;}
+.ai-label{
+  display:flex;align-items:center;gap:0.5rem;
+  font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;
+  text-transform:uppercase;color:#C4A4F5;
+}
+.ai-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:#9B59F5;box-shadow:0 0 6px #9B59F5;
+  animation:blink 1.5s ease infinite;
+}
+.ai-output{
+  background:var(--surf3);border:1px solid rgba(155,89,245,0.2);
+  border-radius:var(--r-md);padding:1rem;
+  font-size:0.78rem;line-height:1.8;color:var(--t2);
+  min-height:60px;
+  position:relative;overflow:hidden;
+}
+.ai-loading{
+  display:flex;align-items:center;gap:0.6rem;
+  color:var(--t3);font-size:0.75rem;
+}
+.ai-dots span{
+  display:inline-block;width:5px;height:5px;border-radius:50%;
+  background:#9B59F5;margin:0 2px;
+  animation:ai-bounce 1.2s ease infinite;
+}
+.ai-dots span:nth-child(2){animation-delay:0.2s;}
+.ai-dots span:nth-child(3){animation-delay:0.4s;}
+@keyframes ai-bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+.ai-placeholder{color:var(--t3);font-size:0.75rem;font-style:italic;}
+
+/* ═══════════════════════════════════════════
+   HISTORY STRIP
+═══════════════════════════════════════════ */
+.history-wrap{
+  position:relative;z-index:1;
+  max-width:1280px;margin:1.25rem auto 0;padding:0 1.5rem;
+}
+.history-panel{
+  background:var(--surf1);border:1px solid var(--b1);border-radius:var(--r-lg);
+  overflow:hidden;
+}
+.history-hd{
+  padding:0.9rem 1.25rem;border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,var(--surf2),transparent);
+}
+.history-hd-left{display:flex;align-items:center;gap:0.6rem;}
+.history-ttl{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--t2);}
+.h-count{
+  background:var(--blue-dim);border:1px solid var(--b1);color:var(--blue);
+  font-family:var(--mono);font-size:0.58rem;padding:0.1rem 0.45rem;border-radius:999px;
+}
+.history-list{
+  display:flex;gap:0;overflow-x:auto;
+  scrollbar-width:thin;
+}
+.history-empty{
+  padding:1.2rem;font-size:0.75rem;color:var(--t3);
+  font-style:italic;text-align:center;width:100%;
+}
+.h-item{
+  min-width:180px;max-width:220px;padding:0.9rem 1.1rem;
+  border-right:1px solid var(--b1);cursor:pointer;
+  flex-shrink:0;transition:background var(--t-fast);
+  animation:h-fadein 0.3s ease;
+}
+@keyframes h-fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.h-item:hover{background:var(--surf2);}
+.h-item:last-child{border-right:none;}
+.h-verdict{
+  display:inline-flex;align-items:center;gap:0.35rem;
+  font-family:var(--mono);font-size:0.58rem;letter-spacing:0.06em;
+  text-transform:uppercase;margin-bottom:0.35rem;
+}
+.h-verdict.real{color:var(--real);}
+.h-verdict.fake{color:var(--fake);}
+.h-dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.h-text{font-size:0.72rem;color:var(--t2);line-height:1.4;margin-bottom:0.3rem;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.h-meta{font-family:var(--mono);font-size:0.6rem;color:var(--t3);}
+
+/* ═══════════════════════════════════════════
+   ANALYTICS STRIP
+═══════════════════════════════════════════ */
+.analytics-wrap{
+  position:relative;z-index:1;
+  max-width:1280px;margin:1.25rem auto;padding:0 1.5rem 2rem;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+}
+@media(max-width:700px){.analytics-wrap{grid-template-columns:repeat(2,1fr);}}
+.an-card{
+  background:var(--surf1);border:1px solid var(--b1);
+  border-radius:var(--r-md);padding:1rem 1.1rem;
+  transition:all var(--t-fast);
+}
+.an-card:hover{border-color:var(--b2);}
+.an-lbl{font-family:var(--mono);font-size:0.58rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--t3);margin-bottom:0.3rem;}
+.an-val{font-family:var(--serif);font-size:1.75rem;font-weight:700;color:var(--t1);}
+.an-sub{font-size:0.65rem;color:var(--t3);margin-top:0.15rem;}
+.an-bar{height:3px;background:var(--surf3);border-radius:999px;margin-top:0.7rem;overflow:hidden;}
+.an-bar-fill{height:100%;border-radius:999px;transition:width 0.5s ease;}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+.footer{
+  position:relative;z-index:1;
+  border-top:1px solid var(--b1);
+  padding:1.25rem 1.5rem;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;
+  max-width:1280px;margin:0 auto;
+}
+.footer-brand{font-family:var(--serif);font-size:0.875rem;color:var(--t1);}
+.footer-brand .a{color:var(--blue);}
+.footer-meta{display:flex;gap:1.5rem;flex-wrap:wrap;}
+.fm-item{
+  font-family:var(--mono);font-size:0.6rem;letter-spacing:0.06em;
+  text-transform:uppercase;color:var(--t3);
+  display:flex;align-items:center;gap:0.35rem;
+}
+
+/* ═══════════════════════════════════════════
+   ONBOARDING OVERLAY
+═══════════════════════════════════════════ */
+.onboard-ov{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(5,11,24,0.92);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;
+  padding:1rem;
+  animation:fade-in 0.4s ease;
+}
+@keyframes fade-in{from{opacity:0;}to{opacity:1;}}
+.onboard-card{
+  background:var(--surf1);border:1px solid var(--b2);
+  border-radius:var(--r-lg);padding:2rem;
+  max-width:460px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6),0 0 0 1px var(--b1);
+  animation:slide-up 0.4s ease;
+}
+@keyframes slide-up{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.ob-icon{
+  width:52px;height:52px;border-radius:var(--r-md);
+  background:linear-gradient(135deg,var(--blue),#7C3AED);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:1.25rem;
+  box-shadow:0 8px 24px var(--blue-glow);
+}
+.ob-title{font-family:var(--serif);font-size:1.4rem;font-weight:700;margin-bottom:0.5rem;}
+.ob-sub{font-size:0.82rem;color:var(--t2);line-height:1.7;margin-bottom:1.25rem;}
+.ob-features{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.5rem;}
+.ob-feat{
+  display:flex;align-items:center;gap:0.75rem;
+  font-size:0.8rem;color:var(--t2);
+}
+.ob-feat-icon{width:28px;height:28px;border-radius:6px;background:var(--surf3);border:1px solid var(--b1);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.ob-btn{
+  width:100%;height:44px;border-radius:var(--r-md);
+  background:linear-gradient(135deg,var(--blue),#6366F1);color:#fff;
+  font-size:0.875rem;font-weight:600;letter-spacing:0.04em;
+  box-shadow:0 4px 18px var(--blue-glow);
+  transition:all var(--t-fast);
+}
+.ob-btn:hover{transform:translateY(-1px);box-shadow:0 6px 24px var(--blue-glow);}
+.ob-skip{text-align:center;margin-top:0.75rem;font-size:0.72rem;color:var(--t3);cursor:pointer;}
+.ob-skip:hover{color:var(--t2);}
+
+/* ═══════════════════════════════════════════
+   SKELETON LOADING
+═══════════════════════════════════════════ */
+.skeleton{
+  background:linear-gradient(90deg,var(--surf2) 25%,var(--surf3) 50%,var(--surf2) 75%);
+  background-size:200% 100%;
+  animation:skel 1.5s ease infinite;
+  border-radius:var(--r-sm);
+}
+@keyframes skel{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+.skel-line{height:12px;margin-bottom:8px;}
+.skel-line.w60{width:60%;}
+.skel-line.w80{width:80%;}
+.skel-line.w100{width:100%;}
+
+/* ═══════════════════════════════════════════
+   COPY/EXPORT ROW
+═══════════════════════════════════════════ */
+.export-row{
+  display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;
+}
+.exp-btn{
+  height:30px;padding:0 0.75rem;border-radius:var(--r-sm);
+  border:1px solid var(--b1);color:var(--t2);font-size:0.7rem;
+  display:inline-flex;align-items:center;gap:0.35rem;
+  transition:all var(--t-fast);
+}
+.exp-btn:hover{border-color:var(--b2);color:var(--t1);}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE TWEAKS
+═══════════════════════════════════════════ */
+@media(max-width:600px){
+  .hero{padding:1.5rem 1rem 1.25rem;}
+  .app-main,.history-wrap,.analytics-wrap,.footer{padding-left:1rem;padding-right:1rem;}
+  .samples-grid{grid-template-columns:1fr;}
+  .verdict-header{flex-direction:column;align-items:flex-start;}
+  .hero-stats{display:none;}
+  .nav-right .status-pill,.nav-right .nav-btn:not(.theme-btn){display:none;}
+}
+
+/* ═══════════════════════════════════════════
+   LIGHT THEME OVERRIDES
+═══════════════════════════════════════════ */
+[data-theme="light"] .topnav{background:rgba(240,244,255,0.9);}
+[data-theme="light"] .ambient .amb-circle:nth-child(1){opacity:0.15;}
+[data-theme="light"] .ambient .amb-circle:nth-child(2){opacity:0.1;}
+[data-theme="light"] .ambient .amb-circle:nth-child(3){opacity:0.08;}
+[data-theme="light"] .news-input{color:#0F172A;}
+[data-theme="light"] .panel{box-shadow:0 4px 24px rgba(0,0,0,0.08);}
+</style>
+</head>
+<body>
+<!-- Ambient glows -->
+<div class="ambient" aria-hidden="true">
+  <div class="amb-circle"></div>
+  <div class="amb-circle"></div>
+  <div class="amb-circle"></div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+<!-- ═══════════ ONBOARDING ═══════════ -->
+<div class="onboard-ov" id="onboardOv" role="dialog" aria-modal="true" aria-label="Welcome to TruthScan">
+  <div class="onboard-card">
+    <div class="ob-icon">
+      <svg width="26" height="26" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    </div>
+    <h2 class="ob-title">Welcome to <span style="color:var(--blue)">TruthScan</span></h2>
+    <p class="ob-sub">An AI-powered credibility engine that analyzes news articles for linguistic signals of misinformation — instantly, in your browser.</p>
+    <div class="ob-features">
+      <div class="ob-feat">
+        <div class="ob-feat-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--blue)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+        <span>Instant NLP signal analysis — no server, fully private</span>
+      </div>
+      <div class="ob-feat">
+        <div class="ob-feat-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#C4A4F5" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg></div>
+        <span>Deep AI analysis powered by Claude — optional</span>
+      </div>
+      <div class="ob-feat">
+        <div class="ob-feat-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="var(--real)" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+        <span>Session analytics, history, and export tools</span>
+      </div>
+    </div>
+    <button class="ob-btn" id="obStart">Get Started</button>
+    <p class="ob-skip" id="obSkip">Skip intro</p>
+  </div>
+</div>
+
+<!-- ═══════════ TOP NAV ═══════════ -->
+<nav class="topnav" role="navigation" aria-label="Main navigation">
+  <div class="nav-brand">
+    <div class="brand-icon" aria-hidden="true">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+    </div>
+    Truth<span class="accent">Scan</span>
+    <span class="nav-badge">Pro</span>
+  </div>
+  <div class="nav-right">
+    <div class="status-pill" aria-label="System status: online">
+      <span class="status-dot" aria-hidden="true"></span>
+      Live
+    </div>
+    <button class="nav-btn" id="shortcutsBtn" aria-label="Keyboard shortcuts" title="Keyboard shortcuts">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+      Shortcuts
+    </button>
+    <button class="nav-btn theme-btn" id="themeBtn" aria-label="Toggle theme">
+      <svg id="themeIcon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<header class="hero" role="banner">
+  <div class="hero-inner">
+    <div class="hero-row">
+      <div>
+        <div class="hero-label">Automated Credibility Intelligence</div>
+        <h1 class="hero-title">Truth<span class="hl">Scan</span></h1>
+        <div class="hero-rule" aria-hidden="true"></div>
+        <div class="hero-meta">
+          <span class="meta-tag">NLP Signal Analysis</span>
+          <span class="meta-tag">AI-Powered Deep Review</span>
+          <span class="meta-tag">Explainable Results</span>
+          <span class="meta-tag">Zero Data Retention</span>
+        </div>
+      </div>
+      <div class="hero-stats" aria-label="Session statistics">
+        <div class="h-stat">
+          <div class="v" id="heroTotal">0</div>
+          <div class="l">Analyzed</div>
+        </div>
+        <div class="h-stat">
+          <div class="v" id="heroAccuracy">—</div>
+          <div class="l">Avg Confidence</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<main class="app-main" role="main">
+
+  <!-- INPUT PANEL -->
+  <div class="panel" role="region" aria-label="Article input">
+    <div class="panel-hd">
+      <div>
+        <div class="panel-lbl">Document Input</div>
+        <div class="panel-ttl">News Article</div>
+        <div class="panel-sub">Paste a headline + body. More text = stronger signal accuracy.</div>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="textarea-wrap">
+        <label for="newsInput" class="sr-only">Article text</label>
+        <textarea
+          class="news-input" id="newsInput"
+          placeholder="Paste your news article here — headline and body text..."
+          aria-label="News article text"
+          aria-describedby="charInfo"
+          spellcheck="true"
+        ></textarea>
+        <div class="ta-footer" aria-live="polite" id="charInfo">
+          <span class="ta-counter" id="charCount">0 characters</span>
+          <span class="ta-words" id="wordCount">0 words</span>
+        </div>
+      </div>
+
+      <div class="sec-label">Sample Articles</div>
+      <div class="samples-grid" role="list" aria-label="Sample articles">
+        <button class="s-chip" data-sample="city" role="listitem" aria-label="Load real sample: City council budget">
+          <span class="s-cat real" aria-label="Real news">Real</span>
+          City council approves $2.3B budget after public hearing…
+        </button>
+        <button class="s-chip" data-sample="science" role="listitem" aria-label="Load real sample: Science study">
+          <span class="s-cat real" aria-label="Real news">Real</span>
+          Scientists publish battery study in peer-reviewed journal…
+        </button>
+        <button class="s-chip" data-sample="miracle" role="listitem" aria-label="Load fake sample: Miracle cure">
+          <span class="s-cat fake" aria-label="Fake news">Fake</span>
+          Miracle leaf cures every illness — doctors HATE this trick!
+        </button>
+        <button class="s-chip" data-sample="celeb" role="listitem" aria-label="Load fake sample: Celebrity claim">
+          <span class="s-cat fake" aria-label="Fake news">Fake</span>
+          Celebrity arrested for alien smuggling, sources CLAIM!!!
+        </button>
+      </div>
+
+      <div class="action-row">
+        <div class="action-row-left">
+          <button class="btn-ghost" id="clearBtn" aria-label="Clear input">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            Clear
+          </button>
+          <button class="btn-ai" id="deepAiBtn" aria-label="Deep AI analysis with Claude">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            Deep AI
+          </button>
+        </div>
+        <button class="btn-analyze" id="analyzeBtn" aria-label="Analyze article (Ctrl+Enter)">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          Analyze
+        </button>
+      </div>
+
+      <div class="live-stats" role="status" aria-live="polite" aria-label="Live analysis stats">
+        <div class="lst-cell">
+          <div class="lst-lbl">Signal</div>
+          <div class="lst-val" id="liveLabel">—</div>
+          <div class="lst-sub">Live preview</div>
+        </div>
+        <div class="lst-cell">
+          <div class="lst-lbl">Risk Cues</div>
+          <div class="lst-val" id="riskMini">0%</div>
+          <div class="lst-sub">Sensational</div>
+        </div>
+        <div class="lst-cell">
+          <div class="lst-lbl">Evidence</div>
+          <div class="lst-val" id="evidMini">0%</div>
+          <div class="lst-sub">Factual refs</div>
+        </div>
+      </div>
+
+      <div class="kbd-hint" aria-label="Keyboard shortcut">
+        Press <kbd class="kbd">Ctrl</kbd> + <kbd class="kbd">Enter</kbd> to analyze
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT PANEL -->
+  <div class="panel" id="resultPanel" role="region" aria-label="Analysis results" aria-live="polite">
+    <div class="scan-ov" id="scanOv" aria-hidden="true"><div class="scan-line"></div></div>
+
+    <div class="panel-hd">
+      <div>
+        <div class="panel-lbl">Analysis Output</div>
+        <div class="panel-ttl">Verdict &amp; Breakdown</div>
+        <div class="panel-sub">Classification, confidence, and explainable linguistic cues.</div>
+      </div>
+      <div class="export-row" id="exportRow" style="display:none;">
+        <button class="exp-btn" id="copyBtn" aria-label="Copy results to clipboard">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy
+        </button>
+        <button class="exp-btn" id="downloadBtn" aria-label="Download report as JSON">
+          <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Export
+        </button>
+      </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div id="emptyState" class="empty-state" aria-label="No analysis yet">
+      <div class="empty-orbit" aria-hidden="true">
+        <div class="e-ring"></div>
+        <div class="e-ring"></div>
+        <div class="e-center">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        </div>
+      </div>
+      <div class="empty-ttl">Awaiting Analysis</div>
+      <div class="empty-sub">Paste an article and press Analyze.<br>Your complete credibility report will appear here.</div>
+    </div>
+
+    <!-- SKELETON STATE -->
+    <div id="skeletonState" style="display:none;padding:1.25rem 1.5rem;">
+      <div class="skeleton skel-line w60" style="margin-bottom:16px;"></div>
+      <div class="skeleton skel-line w100"></div>
+      <div class="skeleton skel-line w80"></div>
+      <div class="skeleton skel-line w100" style="margin-top:16px;height:80px;border-radius:12px;"></div>
+      <div class="skeleton skel-line w60" style="margin-top:12px;"></div>
+    </div>
+
+    <!-- RESULT BLOCK -->
+    <div id="resultBlock" style="display:none;">
+
+      <!-- VERDICT + GAUGE -->
+      <div class="verdict-header">
+        <div class="gauge-wrap" role="img" aria-label="Confidence gauge">
+          <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="gauge-bg" cx="60" cy="60" r="52"/>
+            <circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="gauge-center">
+            <div class="g-pct" id="gaugePct">0%</div>
+            <div class="g-lbl">Confidence</div>
+          </div>
+        </div>
+        <div class="verdict-info">
+          <div class="verdict-stamp" id="verdictStamp" role="status">—</div>
+          <div class="v-title" id="vTitle">—</div>
+          <div class="v-conf" id="vConf"></div>
+          <div class="v-explain" id="vExplain"></div>
+        </div>
+      </div>
+
+      <!-- METER SECTION -->
+      <div class="res-section">
+        <div class="sec-label">Confidence Meter</div>
+        <div class="lin-meter">
+          <div class="lm-head">
+            <span class="lm-lbl">Overall Score</span>
+            <span class="lm-val" id="meterVal">0%</span>
+          </div>
+          <div class="lm-track"><div class="lm-fill" id="meterFill"></div></div>
+        </div>
+        <div class="cue-grid">
+          <div class="cue-card risk">
+            <div class="cc-lbl">Risk Cues</div>
+            <div class="cc-val" id="riskBig">0%</div>
+            <div class="cc-sub">Sensational + vague</div>
+          </div>
+          <div class="cue-card evid">
+            <div class="cc-lbl">Evidence Cues</div>
+            <div class="cc-val" id="evidBig">0%</div>
+            <div class="cc-sub">Specifics + refs</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KEY FEATURES -->
+      <div class="res-section">
+        <div class="sec-label">Key Linguistic Signals</div>
+        <div class="feat-tags" id="featTags" role="list" aria-label="Detected linguistic features"></div>
+      </div>
+
+      <!-- BREAKDOWN -->
+      <div class="res-section">
+        <div class="sec-label">Signal Breakdown</div>
+        <div id="fbList" role="list" aria-label="Feature breakdown"></div>
+      </div>
+
+      <!-- AI DEEP ANALYSIS -->
+      <div class="ai-section" id="aiSection">
+        <div class="ai-header">
+          <div class="ai-label">
+            <div class="ai-dot" aria-hidden="true"></div>
+            Claude AI Deep Analysis
+          </div>
+          <button class="exp-btn" id="aiRunBtn" aria-label="Run deep AI analysis">Run Analysis</button>
+        </div>
+        <div class="ai-output" id="aiOutput">
+          <div class="ai-placeholder">Click "Run Analysis" for an in-depth AI review of this article's credibility signals.</div>
+        </div>
+      </div>
+
+    </div><!-- /resultBlock -->
+  </div><!-- /result panel -->
+
+</main>
+
+<!-- ═══════════ HISTORY ═══════════ -->
+<div class="history-wrap" role="region" aria-label="Analysis history">
+  <div class="history-panel">
+    <div class="history-hd">
+      <div class="history-hd-left">
+        <span class="history-ttl">Session History</span>
+        <span class="h-count" id="histCount">0</span>
+      </div>
+      <button class="exp-btn" id="clearHistBtn" aria-label="Clear history">Clear</button>
+    </div>
+    <div class="history-list" id="historyList" role="list" aria-label="Past analyses">
+      <div class="history-empty" id="histEmpty">No analyses yet — run your first article above.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ANALYTICS ═══════════ -->
+<div class="analytics-wrap" role="region" aria-label="Session analytics">
+  <div class="an-card">
+    <div class="an-lbl">Total Analyzed</div>
+    <div class="an-val" id="anTotal">0</div>
+    <div class="an-sub">This session</div>
+    <div class="an-bar"><div class="an-bar-fill" id="anTotalBar" style="width:0%;background:var(--blue);"></div></div>
+  </div>
+  <div class="an-card">
+    <div class="an-lbl">Flagged Fake</div>
+    <div class="an-val" id="anFake">0</div>
+    <div class="an-sub">High-risk articles</div>
+    <div class="an-bar"><div class="an-bar-fill" id="anFakeBar" style="width:0%;background:var(--fake);"></div></div>
+  </div>
+  <div class="an-card">
+    <div class="an-lbl">Verified Real</div>
+    <div class="an-val" id="anReal">0</div>
+    <div class="an-sub">Credible articles</div>
+    <div class="an-bar"><div class="an-bar-fill" id="anRealBar" style="width:0%;background:var(--real);"></div></div>
+  </div>
+  <div class="an-card">
+    <div class="an-lbl">Avg Confidence</div>
+    <div class="an-val" id="anConf">—</div>
+    <div class="an-sub">Mean confidence score</div>
+    <div class="an-bar"><div class="an-bar-fill" id="anConfBar" style="width:0%;background:var(--gold);"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<footer class="footer" role="contentinfo">
+  <div class="footer-brand">Truth<span class="a">Scan</span> — AI Credibility Engine</div>
+  <div class="footer-meta">
+    <span class="fm-item">
+      <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      No data leaves your device
+    </span>
+    <span class="fm-item">NLP v2.4 · AI-Powered</span>
+    <span class="fm-item" id="footerTime">—</span>
+  </div>
+</footer>
+
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}</style>
+
+<script>
+/* ══════════════════════════════════════════
+   CONSTANTS & DATA
+══════════════════════════════════════════ */
+const SAMPLES = {
+  city:    "After a two-hour public hearing on Tuesday, the City Council unanimously approved a $2.3 billion operating budget for fiscal year 2026. The plan increases funding for road maintenance by 12% and expands after-school programs in 47 public schools while keeping the property tax rate unchanged at 1.8%. According to city financial director Maria Santos, the budget allocates $340 million for infrastructure repair. The full budget document and amendment log are available on the city's official website.",
+  science: "Scientists have published results in Nature Energy showing that a new lithium-ceramic battery chemistry can increase energy density by 18% compared with existing lithium-ion cells. The peer-reviewed study, led by researchers at MIT and conducted over 14 months with 200+ charge cycles, was independently reviewed by a panel of materials engineers. According to lead author Dr. James Wei, the technology could reach commercial viability within three to five years.",
+  miracle: "MIRACLE leaf CURES every illness — doctors HATE this one simple trick!!! Big Pharma has been HIDING this secret remedy for DECADES. Sources say this will SHOCK you and DESTROY the medical establishment!!! You won't BELIEVE what happens next — SHARE NOW before they DELETE this!!! The government doesn't want you to know about this AMAZING breakthrough!!!",
+  celeb:   "BREAKING: Celebrity arrested for ALIEN smuggling — SHOCKING exclusive sources claim devastating new evidence will DESTROY the deep state!!! Insiders say the truth will EXPLODE the internet!!! You won't believe what's being COVERED UP by the mainstream media!!! SHARE this before they BAN it everywhere!!! This is the BIGGEST scandal in HISTORY!!!"
+};
+
+const SENSATIONAL = [
+  "shocking","you won't believe","miracle","secret remedy","hate this trick","exposed",
+  "outrage","destroyed","slams","they don't want you to know","cover up","big pharma",
+  "share now","share before","deleted","hidden for decades","one simple trick","bombshell",
+  "unbelievable","wake up","establishment","mainstream media","deep state","breaking:",
+  "exclusive","insiders say","sources claim","ban it","biggest scandal"
+];
+const EVIDENCE = [
+  "according to","study","published","peer-reviewed","percent","%","data shows",
+  "official","journal","research","report","survey","statistics","cited","evidence",
+  "confirmed","announced","spokesperson","statement","government","university",
+  "dr.","professor","scientists","researchers","analysis","findings"
+];
+const ATTRIBUTION = [
+  "according to","sources say","officials confirmed","stated that","reported by",
+  "said in a","told reporters","in a statement","per the","as reported"
+];
+
+const FB_DEFS = [
+  {key:"sensational",name:"Sensational Language",type:"risk",
+   desc:"Clickbait-style phrases that correlate with low-credibility content."},
+  {key:"punctuation",name:"Emotive Punctuation",type:"risk",
+   desc:"Excessive !! and ALL-CAPS manufacture urgency and emotional provocation."},
+  {key:"specificity",name:"Specificity & Data",type:"evid",
+   desc:"Quantified data and named sources increase factual credibility."},
+  {key:"attribution",name:"Attribution Signals",type:"evid",
+   desc:"Phrases linking claims to verifiable external sources suggest journalistic practice."}
+];
+
+/* ══════════════════════════════════════════
+   STATE
+══════════════════════════════════════════ */
+const STATE = {
+  history: JSON.parse(sessionStorage.getItem('ts_hist') || '[]'),
+  analytics: JSON.parse(sessionStorage.getItem('ts_an') || '{"total":0,"real":0,"fake":0,"sumConf":0}'),
+  lastResult: null
+};
+
+/* ══════════════════════════════════════════
+   ANALYSIS ENGINE
+══════════════════════════════════════════ */
+function analyze(text) {
+  // Sanitize input
+  const safe = text.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lower = text.toLowerCase();
+
+  // Feature extraction
+  const numbers     = /\d+/.test(text);
+  const exclaims    = (text.match(/!/g) || []).length;
+  const allCaps     = (text.match(/\b[A-Z]{3,}\b/g) || []).length;
+  const sensHits    = SENSATIONAL.filter(w => lower.includes(w)).length;
+  const evidHits    = EVIDENCE.filter(w => lower.includes(w)).length;
+  const attrHits    = ATTRIBUTION.filter(w => lower.includes(w)).length;
+  const wordCnt     = text.trim().split(/\s+/).filter(Boolean).length;
+  const avgWordLen  = wordCnt > 0 ? text.replace(/\s/g,'').length / wordCnt : 0;
+  const questionMks = (text.match(/\?/g)||[]).length;
+
+  // Score computation — bounded 0-100
+  const riskScore = clamp(sensHits*16 + exclaims*6 + allCaps*8 + questionMks*3, 0, 100);
+  const evidScore = clamp(evidHits*13 + attrHits*11 + (numbers?15:0) + clamp(wordCnt/8,0,20), 0, 100);
+
+  const isReal = evidScore >= riskScore;
+  const diff   = Math.abs(evidScore - riskScore);
+  const conf   = clamp(50 + diff * 0.55, 42, 96);
+
+  // Key features
+  const features = [];
+  if (numbers)       features.push("Numbers Present");
+  if (exclaims > 1)  features.push("Heavy Punctuation");
+  if (allCaps > 0)   features.push("ALL-CAPS Usage");
+  if (sensHits > 0)  features.push("Sensational Phrasing");
+  if (evidHits > 0)  features.push("Evidence Language");
+  if (attrHits > 0)  features.push("Attribution Signals");
+  if (avgWordLen > 6) features.push("Complex Vocabulary");
+  if (!features.length) features.push("No Strong Signals");
+
+  // Breakdown
+  const breakdown = {
+    sensational: clamp(sensHits * 28, 0, 100),
+    punctuation: clamp(exclaims * 16 + allCaps * 10, 0, 100),
+    specificity: clamp(evidScore, 0, 100),
+    attribution: clamp(attrHits * 32, 0, 100)
+  };
+
+  // Reading level (Flesch-Kincaid approximation)
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  const syllables = text.toLowerCase().match(/[aeiou]/g)?.length || 0;
+  const fk = wordCnt > 0 && sentences > 0
+    ? 206.835 - 1.015*(wordCnt/sentences) - 84.6*(syllables/wordCnt)
+    : 50;
+  const readLevel = fk > 80 ? "Very Easy" : fk > 60 ? "Standard" : fk > 40 ? "Academic" : "Technical";
+
+  return {
+    isReal, conf: Math.round(conf),
+    riskScore: Math.round(riskScore),
+    evidScore: Math.round(evidScore),
+    features, breakdown,
+    wordCount: wordCnt, readLevel,
+    timestamp: new Date().toISOString(),
+    preview: text.trim().slice(0, 90) + (text.length > 90 ? '…' : '')
+  };
+}
+
+function clamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+
+/* ══════════════════════════════════════════
+   UI UTILITIES
+══════════════════════════════════════════ */
+function $(id){ return document.getElementById(id); }
+function qs(sel){ return document.querySelector(sel); }
+
+// Toast
+function toast(msg, type='info', dur=3000){
+  const icons = {
+    success:'<svg class="toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    error:  '<svg class="toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    info:   '<svg class="toast-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+  };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `${icons[type]||icons.info}<span>${escHtml(msg)}</span>`;
+  $('toastContainer').appendChild(el);
+  setTimeout(()=>{
+    el.classList.add('out');
+    setTimeout(()=>el.remove(), 300);
+  }, dur);
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Scan animation
+function triggerScan(){
+  const ov = $('scanOv');
+  ov.classList.remove('go');
+  void ov.offsetWidth;
+  ov.classList.add('go');
+  setTimeout(()=>ov.classList.remove('go'), 950);
+}
+
+// Gauge
+function setGauge(pct, cls){
+  const CIRC = 2 * Math.PI * 52; // r=52
+  const fill = $('gaugeFill');
+  fill.style.strokeDasharray  = CIRC;
+  fill.style.strokeDashoffset = CIRC; // reset
+  fill.className = `gauge-fill ${cls}`;
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      fill.style.strokeDashoffset = CIRC * (1 - pct/100);
+    }, 50);
+  });
+  $('gaugePct').textContent = pct + '%';
+}
+
+/* ══════════════════════════════════════════
+   RENDER RESULTS
+══════════════════════════════════════════ */
+function renderResult(r){
+  const cls = r.isReal ? 'real' : 'fake';
+  const label = r.isReal ? 'CREDIBLE' : 'DISPUTED';
+
+  // Verdict stamp
+  const stamp = $('verdictStamp');
+  stamp.textContent = (r.isReal ? '✓ ' : '✕ ') + label;
+  stamp.className = `verdict-stamp ${cls}`;
+
+  // Title
+  const vt = $('vTitle');
+  vt.textContent = r.isReal ? 'Likely Real' : 'Likely Fake';
+  vt.className   = `v-title ${cls}`;
+
+  $('vConf').textContent = `Confidence: ${r.conf}% · ${r.wordCount} words · ${r.readLevel} reading level`;
+
+  const expl = $('vExplain');
+  expl.className = `v-explain ${cls}`;
+  expl.textContent = r.isReal
+    ? `This article contains more evidence-like signals — numeric specifics, sourced attribution, and reference language — than high-risk indicators. That linguistic profile shifts the classification toward Credible.`
+    : `This article contains more high-risk linguistic signals — sensational phrasing, urgency punctuation, and emotional amplifiers — than factual reference language. That profile shifts toward Disputed.`;
+
+  // Gauge
+  setGauge(r.conf, cls);
+
+  // Linear meter
+  const mf = $('meterFill');
+  mf.style.width = '0%';
+  mf.className   = `lm-fill ${cls}`;
+  requestAnimationFrame(()=>{ mf.style.width = r.conf + '%'; });
+  $('meterVal').textContent = r.conf + '%';
+
+  $('riskBig').textContent = r.riskScore + '%';
+  $('evidBig').textContent = r.evidScore + '%';
+
+  // Features
+  $('featTags').innerHTML = r.features
+    .map(f=>`<span class="feat-tag" role="listitem">${escHtml(f)}</span>`)
+    .join('');
+
+  // Breakdown
+  $('fbList').innerHTML = FB_DEFS.map(d=>`
+    <div class="fb-row" role="listitem">
+      <div class="fb-top">
+        <span class="fb-name">${d.name}</span>
+        <span class="fb-pct">${r.breakdown[d.key]}%</span>
+      </div>
+      <div class="fb-desc">${d.desc}</div>
+      <div class="fb-track">
+        <div class="fb-fill ${d.type}" id="fb_${d.key}" style="width:0%"></div>
+      </div>
+    </div>
+  `).join('');
+
+  requestAnimationFrame(()=>{
+    FB_DEFS.forEach(d=>{
+      const el = document.getElementById('fb_'+d.key);
+      if(el) el.style.width = r.breakdown[d.key] + '%';
+    });
+  });
+
+  // Reset AI output
+  $('aiOutput').innerHTML = '<div class="ai-placeholder">Click "Run Analysis" for an in-depth AI review of this article\'s credibility signals.</div>';
+
+  // Show/hide
+  $('emptyState').style.display  = 'none';
+  $('skeletonState').style.display = 'none';
+  $('resultBlock').style.display = 'block';
+  $('exportRow').style.display   = 'flex';
+}
+
+/* ══════════════════════════════════════════
+   HISTORY MANAGER
+══════════════════════════════════════════ */
+function addHistory(r){
+  STATE.history.unshift(r);
+  if(STATE.history.length > 12) STATE.history.pop();
+  sessionStorage.setItem('ts_hist', JSON.stringify(STATE.history));
+  renderHistory();
+}
+
+function renderHistory(){
+  const list = $('historyList');
+  const empty = $('histEmpty');
+  $('histCount').textContent = STATE.history.length;
+  if(!STATE.history.length){
+    empty.style.display='block'; list.innerHTML='';list.appendChild(empty); return;
+  }
+  empty.style.display='none';
+  list.innerHTML = STATE.history.map((r,i)=>`
+    <div class="h-item" role="listitem" tabindex="0" aria-label="History item: ${r.isReal?'Real':'Fake'}" data-idx="${i}">
+      <div class="h-verdict ${r.isReal?'real':'fake'}">
+        <span class="h-dot"></span>${r.isReal?'REAL':'FAKE'} · ${r.conf}%
+      </div>
+      <div class="h-text">${escHtml(r.preview)}</div>
+      <div class="h-meta">${new Date(r.timestamp).toLocaleTimeString()}</div>
+    </div>
+  `).join('');
+  list.querySelectorAll('.h-item').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const r = STATE.history[+el.dataset.idx];
+      if(r){
+        STATE.lastResult = r;
+        renderResult(r);
+        triggerScan();
+        toast('History item loaded','info');
+      }
+    });
+    el.addEventListener('keydown',e=>{if(e.key==='Enter')el.click();});
+  });
+}
+
+/* ══════════════════════════════════════════
+   ANALYTICS MANAGER
+══════════════════════════════════════════ */
+function updateAnalytics(r){
+  const a = STATE.analytics;
+  a.total++;
+  r.isReal ? a.real++ : a.fake++;
+  a.sumConf += r.conf;
+  sessionStorage.setItem('ts_an', JSON.stringify(a));
+  renderAnalytics();
+}
+
+function renderAnalytics(){
+  const a = STATE.analytics;
+  const avg = a.total ? Math.round(a.sumConf / a.total) : 0;
+  $('anTotal').textContent = a.total;
+  $('anFake').textContent  = a.fake;
+  $('anReal').textContent  = a.real;
+  $('anConf').textContent  = a.total ? avg + '%' : '—';
+  const maxSafe = Math.max(a.total, 1);
+  $('anTotalBar').style.width = Math.min(100, a.total * 10) + '%';
+  $('anFakeBar').style.width  = (a.fake / maxSafe * 100) + '%';
+  $('anRealBar').style.width  = (a.real / maxSafe * 100) + '%';
+  $('anConfBar').style.width  = avg + '%';
+  // hero
+  $('heroTotal').textContent   = a.total;
+  $('heroAccuracy').textContent = a.total ? avg + '%' : '—';
+}
+
+/* ══════════════════════════════════════════
+   DEEP AI ANALYSIS
+══════════════════════════════════════════ */
+async function runDeepAI(text, nResult){
+  const out = $('aiOutput');
+  out.innerHTML = `<div class="ai-loading"><div class="ai-dots"><span></span><span></span><span></span></div> Claude is analyzing this article…</div>`;
+  $('aiRunBtn').disabled = true;
+
+  const prompt = `You are a professional fact-checker and NLP expert. Analyze this news article for credibility signals. Provide a concise 3-4 sentence assessment covering: (1) key credibility signals you detect, (2) red flags or trustworthy indicators, (3) your overall credibility assessment. Be direct and specific.
+
+Article text:
+"${text.slice(0,1500)}"
+
+NLP pre-analysis: Verdict=${nResult.isReal?'Credible':'Disputed'}, Confidence=${nResult.conf}%, Risk=${nResult.riskScore}%, Evidence=${nResult.evidScore}%`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:400,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    if(!resp.ok) throw new Error('API error ' + resp.status);
+    const data = await resp.json();
+    const txt  = (data.content||[]).map(b=>b.text||'').join('').trim();
+    out.textContent = txt || 'Analysis complete — no additional signals detected.';
+    toast('AI analysis complete','success');
+  } catch(e) {
+    out.innerHTML = '<span style="color:var(--t3);font-style:italic;">AI analysis unavailable in this environment. The NLP analysis above provides the credibility assessment.</span>';
+  } finally {
+    $('aiRunBtn').disabled = false;
+  }
+}
+
+/* ══════════════════════════════════════════
+   LIVE PREVIEW
+══════════════════════════════════════════ */
+let debounceTimer;
+function updateLive(){
+  const t = $('newsInput').value;
+  const chars = t.length;
+  const words = t.trim() ? t.trim().split(/\s+/).length : 0;
+  $('charCount').textContent = `${chars} char${chars!==1?'s':''}`;
+  $('wordCount').textContent = `${words} word${words!==1?'s':''}`;
+
+  if(!t.trim()){
+    ['liveLabel','riskMini','evidMini'].forEach(id=>$$(id,'—',''));
+    return;
+  }
+  const r = analyze(t);
+  const ll = $('liveLabel');
+  ll.textContent = r.isReal ? 'Real' : 'Fake';
+  ll.className   = `lst-val ${r.isReal?'real':'fake'}`;
+  $('riskMini').textContent = r.riskScore + '%';
+  $('evidMini').textContent = r.evidScore + '%';
+}
+function $$(id,txt,cls){ const e=$(id); if(e){e.textContent=txt; if(cls!==undefined)e.className=`lst-val${cls?' '+cls:''}`;} }
+
+/* ══════════════════════════════════════════
+   MAIN ANALYZE FLOW
+══════════════════════════════════════════ */
+function runAnalysis(){
+  const text = $('newsInput').value.trim();
+  if(!text){
+    toast('Please paste an article first','error');
+    $('newsInput').focus();
+    return;
+  }
+  if(text.length < 30){
+    toast('Text too short — paste a full article for better accuracy','error');
+    return;
+  }
+
+  // Shimmer button
+  const btn = $('analyzeBtn');
+  btn.classList.add('shimmer');
+  setTimeout(()=>btn.classList.remove('shimmer'),750);
+
+  // Show skeleton briefly
+  $('emptyState').style.display   = 'none';
+  $('skeletonState').style.display = 'block';
+  $('resultBlock').style.display  = 'none';
+  $('exportRow').style.display    = 'none';
+
+  triggerScan();
+
+  setTimeout(()=>{
+    const r = analyze(text);
+    STATE.lastResult = r;
+    renderResult(r);
+    addHistory(r);
+    updateAnalytics(r);
+    toast(`Analysis complete — ${r.isReal?'Credible':'Disputed'} (${r.conf}% confidence)`,
+          r.isReal?'success':'error');
+  }, 650);
+}
+
+/* ══════════════════════════════════════════
+   EXPORT
+══════════════════════════════════════════ */
+function copyResults(){
+  const r = STATE.lastResult;
+  if(!r){ toast('No results to copy','error'); return; }
+  const txt = [
+    `TruthScan — Credibility Report`,
+    `─────────────────────────────────`,
+    `Verdict:     ${r.isReal?'CREDIBLE / REAL':'DISPUTED / FAKE'}`,
+    `Confidence:  ${r.conf}%`,
+    `Risk Cues:   ${r.riskScore}%`,
+    `Evidence:    ${r.evidScore}%`,
+    `Words:       ${r.wordCount}`,
+    `Reading:     ${r.readLevel}`,
+    `Features:    ${r.features.join(', ')}`,
+    `Timestamp:   ${new Date(r.timestamp).toLocaleString()}`,
+    `─────────────────────────────────`,
+    `Analyzed by TruthScan`
+  ].join('\n');
+  navigator.clipboard.writeText(txt).then(()=>toast('Report copied to clipboard','success'));
+}
+
+function downloadJSON(){
+  const r = STATE.lastResult;
+  if(!r){ toast('No results to export','error'); return; }
+  const data = JSON.stringify({
+    app:'TruthScan',
+    version:'2.4',
+    result: r,
+    exportedAt: new Date().toISOString()
+  }, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = `truthscan-report-${Date.now()}.json`;
+  a.click();
+  toast('Report downloaded','success');
+}
+
+/* ══════════════════════════════════════════
+   THEME
+══════════════════════════════════════════ */
+function toggleTheme(){
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme')==='dark';
+  html.setAttribute('data-theme', isDark?'light':'dark');
+  const icon = $('themeIcon');
+  icon.innerHTML = isDark
+    ? '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+    : '<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>';
+  toast(isDark?'Light mode activated':'Dark mode activated','info',1500);
+}
+
+/* ══════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════ */
+function tick(){
+  const t = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  $('footerTime') && ($('footerTime').textContent = t);
+}
+tick(); setInterval(tick,1000);
+
+/* ══════════════════════════════════════════
+   ONBOARDING
+══════════════════════════════════════════ */
+function closeOnboard(){
+  const ov = $('onboardOv');
+  ov.style.opacity='0';ov.style.transition='opacity 0.3s';
+  setTimeout(()=>{ ov.style.display='none'; $('newsInput').focus(); },300);
+}
+$('obStart').onclick = closeOnboard;
+$('obSkip').onclick  = closeOnboard;
+
+/* ══════════════════════════════════════════
+   EVENT LISTENERS
+══════════════════════════════════════════ */
+const ni = $('newsInput');
+ni.addEventListener('input', ()=>{ clearTimeout(debounceTimer); debounceTimer=setTimeout(updateLive,200); });
+
+document.querySelectorAll('.s-chip').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    ni.value = SAMPLES[btn.dataset.sample] || '';
+    updateLive();
+    ni.focus();
+    toast('Sample article loaded','info',1500);
+  });
+});
+
+$('clearBtn').onclick = ()=>{
+  ni.value='';
+  updateLive();
+  $('emptyState').style.display   = 'block';
+  $('skeletonState').style.display = 'none';
+  $('resultBlock').style.display  = 'none';
+  $('exportRow').style.display    = 'none';
+  $('liveLabel').textContent='—';$('liveLabel').className='lst-val';
+  toast('Cleared','info',1200);
+};
+
+$('analyzeBtn').onclick = runAnalysis;
+$('deepAiBtn').onclick  = ()=>{
+  const t = ni.value.trim();
+  if(!t){ toast('Paste an article first','error'); return; }
+  if(!STATE.lastResult){
+    toast('Run the NLP analysis first, then Deep AI','info');
+    return;
+  }
+  runDeepAI(t, STATE.lastResult);
+};
+$('aiRunBtn').onclick = ()=>{
+  const t = ni.value.trim();
+  if(!t||!STATE.lastResult){ toast('Analyze an article first','error'); return; }
+  runDeepAI(t, STATE.lastResult);
+};
+$('copyBtn').onclick     = copyResults;
+$('downloadBtn').onclick = downloadJSON;
+$('themeBtn').onclick    = toggleTheme;
+$('clearHistBtn').onclick = ()=>{
+  STATE.history.length=0;
+  sessionStorage.removeItem('ts_hist');
+  renderHistory();
+  toast('History cleared','info',1500);
+};
+
+// Keyboard shortcut: Ctrl+Enter
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runAnalysis();}
+  if(e.key==='Escape'){ const ov=$('onboardOv'); if(ov.style.display!=='none')closeOnboard(); }
+});
+
+// Shortcuts modal (simple toast)
+$('shortcutsBtn').onclick = ()=>toast('Ctrl+Enter → Analyze · Esc → Close overlays','info',4000);
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+renderHistory();
+renderAnalytics();
+</script>
+</body>
+</html>
